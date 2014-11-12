@@ -88,7 +88,8 @@ int main(int argc, char *argv[])
     }
 
 	// open aboot for Amazon Fire Tv
-	if((file=open("aboot",O_RDWR)) < -1)
+	// Lets use the real location since we have an android app now!
+	if((file=open("/dev/block/platform/msm_sdcc.1/by-name/aboot",O_RDWR)) < -1)
                 return 1;
     
     char buffer[17];

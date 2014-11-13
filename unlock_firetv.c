@@ -12,121 +12,129 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Define Constants
-#define FIRE_TV_ABOOT "/dev/block/platform/msm_sdcc.1/by-name/aboot"
-#define LOCK_STRING "ANDROID-BOOT!\0\0\0\0\0\0\0"
-#define UNLOCK_STRING "ANDROID-BOOT!\0\0\0\1\0\0\0"
-
+// Taken from online someplace
+// Easy HexDump Function 
 void hexDump (char *desc, void *addr, int len) {
-	int i;
-	unsigned char buff[17];
-	unsigned char *pc = (unsigned char*)addr;
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
 
-	// Output description if given.
-	if (desc != NULL)
-		printf ("%s:\n", desc);
+    // Output description if given.
+    if (desc != NULL)
+        printf ("%s:\n", desc);
 
-	// Process every byte in the data.
-	for (i = 0; i < len; i++) {
-		// Multiple of 16 means new line (with line offset).
-		if ((i % 16) == 0) {
-			// Just don't print ASCII for the zeroth line.
-			if (i != 0)
-				printf ("  %s\n", buff);
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
 
-			// Output the offset.
-			printf ("  %04x ", i);
-		}
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                printf ("  %s\n", buff);
 
-		// Now the hex code for the specific character.
-		printf (" %02x", pc[i]);
+            // Output the offset.
+            printf ("  %04x ", i);
+        }
 
-		// And store a printable ASCII character for later.
-		if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-			buff[i % 16] = '.';
-		else
-			buff[i % 16] = pc[i];
+        // Now the hex code for the specific character.
+        printf (" %02x", pc[i]);
 
-		buff[(i % 16) + 1] = '\0';
-	}
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+            buff[i % 16] = '.';
+        else
+            buff[i % 16] = pc[i];
+        buff[(i % 16) + 1] = '\0';
+    }
 
-	// Pad out last line if not exactly 16 characters.
-	while ((i % 16) != 0) {
-		printf ("   ");
-		i++;
-	}
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        printf ("   ");
+        i++;
+    }
 
-	// And print the final ASCII bit.
-	printf ("  %s\n", buff);
+    // And print the final ASCII bit.
+    printf ("  %s\n", buff);
 }
 
-/* Check the status of the bootloader and return it */
-int check_bootloader_status(int file, int buffer) {
-	read(file,buffer,17);
-	if (buffer[16] == 0)
-		return 0;
-	else if (buffer[16] == 1)
-		return 1;
-	else
-		return -1;
-} 
+int main(int argc, char *argv[])
+{	
+	int file=0;
+	int lock,unlock,check;
 
-/* Load the aboot partition from emmc and return it */
-int get_aboot_partition() {
-	return open(FIRE_TV_ABOOT,O_RDWR);
-}
+	// Magic	
+	char lock_string[] = "ANDROID-BOOT!\0\0\0\0\0\0\0";
+	char unlock_string[] = "ANDROID-BOOT!\0\0\0\1\0\0\0";
 
-int main(int argc, char *argv[]) {	
-	int file = 0;
-	char buffer[17] = NULL;
-
-	if (file =< -1) {
-		printf("Error: ABOOT partition not found!");
-		exit(1);
-	}
-	
-	// Present the flags to the user
-  	if (argv[1] == NULL) {
+  	if (argv[1] == NULL)
+	{
 		fprintf(stderr, "Amazon FireTV Bootloader Unlock OpenSource Tool\n");
 		fprintf(stderr, "By: rhcp011235\n");
 		fprintf(stderr, "Usage: %s unlock|lock|check\n",argv[0]);
 		exit(1);
 	}
 
-	// Check Bootloader Status
-	if (strcmp(argv[1],"check") == 0) {   
-		if (check_bootloader_status(file, buffer) == 0)
-			printf("You Have a locked Bootloader\n");
-		else
-			printf("You have an Unlocked Bootloader - Congrats\n");
-		exit(1);
+	if (strcmp(argv[1],"lock") == 0)
+    {
+	   lock = 1;
 	}
+	if (strcmp(argv[1],"unlock") == 0)
+	{	   
+	   unlock = 1;
+	}
+    if (strcmp(argv[1],"check") == 0)
+    {      
+       check = 1;
+    }
 
-	// Load ABOOT from its partition
-	file = get_aboot_partition();
-	lseek(file,-512,SEEK_END);
+	// open aboot for Amazon Fire Tv
+	// Lets use the real location since we have an android app now!
+	if((file=open("/dev/block/platform/msm_sdcc.1/by-name/aboot",O_RDWR)) < -1)
+                return 1;
+    
+    char buffer[17];
+    char buffer2[17];
+ 
+	//
+	// Seek from the bottom of the file
+    lseek(file,-512,SEEK_END); 
 	
-	// Unlock the bootloader
-	if (strcmp(argv[1],"unlock") == 0) {
-		write(file,&unlock_string,sizeof(unlock_string));
+	
+    if (check == 1)
+    {   
+        read(file,buffer,17);
+        if (buffer[16] == 0)
+            printf("You Have a locked Bootloader\n");
+        if (buffer[16] == 1)
+            printf("You have an Unlocked Bootloader - Congrats\n");
+        exit(1);
+    }
+	if (unlock == 1)
+	{
+	    // Unlock the bootloader
+	    write(file,&unlock_string,sizeof(unlock_string));
 	}
+	if (lock == 1)
+    {
+        // Unlock the bootloader
+        write(file,&lock_string,sizeof(unlock_string));
+    }
 	
-	// Lock the bootloader
-	if (strcmp(argv[1],"lock") == 0) {
-		write(file,&lock_string,sizeof(unlock_string));
-	}
+    // Seek from the bottom of the file
+    // Show our Unlock or Lock status to the user
+    lseek(file,-512,SEEK_END);
+	read(file,buffer,17);
+    hexDump ("after Patch buffer", &buffer, sizeof (buffer));
 	
-	// Load ABOOT from its partition
-	file = get_aboot_partition();
-	lseek(file,-512,SEEK_END);
-	
-	// Present the status of the bootloader
-	if (check_bootloader_status(file, buffer) == 0) {
-		printf("You have a locked bootloader\n");
-	} else {
-		printf("You have a partially unlocked bootloader now\n");
-	}
-	
-	// Close the program
-	exit(1);
+    if(unlock == 1){
+        printf("You have a partially unlocked bootloader now\n");
+        exit(1);
+    }
+    
+    if(lock == 1)
+    {
+        printf("You have a Re-Locked Your bootloader now\n");
+        exit(1);
+    }
+    return 0;
 }

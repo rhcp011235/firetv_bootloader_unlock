@@ -12,129 +12,93 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Taken from online someplace
-// Easy HexDump Function 
-void hexDump (char *desc, void *addr, int len) {
-    int i;
-    unsigned char buff[17];
-    unsigned char *pc = (unsigned char*)addr;
+// Define Constants
+#define FIRE_TV_ABOOT "/dev/block/platform/msm_sdcc.1/by-name/aboot"
+#define LOCK_STRING "ANDROID-BOOT!\0\0\0\0\0\0\0"
+#define UNLOCK_STRING "ANDROID-BOOT!\0\0\0\1\0\0\0"
 
-    // Output description if given.
-    if (desc != NULL)
-        printf ("%s:\n", desc);
+/* Load the aboot partition from emmc and return it */
+int check_for_aboot_partition() {
+        int file = open(FIRE_TV_ABOOT,O_RDWR);
 
-    // Process every byte in the data.
-    for (i = 0; i < len; i++) {
-        // Multiple of 16 means new line (with line offset).
-
-        if ((i % 16) == 0) {
-            // Just don't print ASCII for the zeroth line.
-            if (i != 0)
-                printf ("  %s\n", buff);
-
-            // Output the offset.
-            printf ("  %04x ", i);
+        if (file == -1) {
+                return 0;
+        } else {
+                return 1;
         }
-
-        // Now the hex code for the specific character.
-        printf (" %02x", pc[i]);
-
-        // And store a printable ASCII character for later.
-        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-            buff[i % 16] = '.';
-        else
-            buff[i % 16] = pc[i];
-        buff[(i % 16) + 1] = '\0';
-    }
-
-    // Pad out last line if not exactly 16 characters.
-    while ((i % 16) != 0) {
-        printf ("   ");
-        i++;
-    }
-
-    // And print the final ASCII bit.
-    printf ("  %s\n", buff);
 }
 
-int main(int argc, char *argv[])
-{	
-	int file=0;
-	int lock,unlock,check;
+/* Check the status of the bootloader and return it */
+int check_bootloader_status() {
+        int file = open(FIRE_TV_ABOOT,O_RDWR);
+        char buffer[17];
 
-	// Magic	
-	char lock_string[] = "ANDROID-BOOT!\0\0\0\0\0\0\0";
-	char unlock_string[] = "ANDROID-BOOT!\0\0\0\1\0\0\0";
-
-  	if (argv[1] == NULL)
-	{
-		fprintf(stderr, "Amazon FireTV Bootloader Unlock OpenSource Tool\n");
-		fprintf(stderr, "By: rhcp011235\n");
-		fprintf(stderr, "Usage: %s unlock|lock|check\n",argv[0]);
-		exit(1);
-	}
-
-	if (strcmp(argv[1],"lock") == 0)
-    {
-	   lock = 1;
-	}
-	if (strcmp(argv[1],"unlock") == 0)
-	{	   
-	   unlock = 1;
-	}
-    if (strcmp(argv[1],"check") == 0)
-    {      
-       check = 1;
-    }
-
-	// open aboot for Amazon Fire Tv
-	// Lets use the real location since we have an android app now!
-	if((file=open("/dev/block/platform/msm_sdcc.1/by-name/aboot",O_RDWR)) < -1)
-                return 1;
-    
-    char buffer[17];
-    char buffer2[17];
- 
-	//
-	// Seek from the bottom of the file
-    lseek(file,-512,SEEK_END); 
-	
-	
-    if (check == 1)
-    {   
+        lseek(file,-512,SEEK_END);
         read(file,buffer,17);
-        if (buffer[16] == 0)
-            printf("You Have a locked Bootloader\n");
-        if (buffer[16] == 1)
-            printf("You have an Unlocked Bootloader - Congrats\n");
+
+        if (buffer[16] == 0) {
+                return 0;
+        } else if (buffer[16] == 1) {
+                return 1;
+        } else {
+                return -1;
+        }
+}
+
+int main(int argc, char *argv[]) {
+        // Present the flags to the user
+        if (argv[1] == NULL) {
+                fprintf(stderr, "Amazon FireTV Bootloader Unlock OpenSource Tool\n");
+                fprintf(stderr, "By: rhcp011235\n");
+                fprintf(stderr, "Usage: %s unlock|lock|check\n",argv[0]);
+                exit(1);
+        }
+
+        if (check_for_aboot_partition() == 0) {
+                printf("No aboot partition is detected!\n");
+                exit(1);
+        }
+
+        // Check Bootloader Status
+        if (strcmp(argv[1],"check") == 0) {
+                if (check_bootloader_status() == 0)
+                        printf("You have a locked bootloader\n");
+                else if (check_bootloader_status() == 1)
+                        printf("You have an unlocked bootloader\n");
+                else
+                        printf("Unknown error occured\n");
+                exit(1);
+        }
+
+        if (strcmp(argv[1],"unlock") == 0 || strcmp(argv[1],"lock") == 0) {
+                int file = open(FIRE_TV_ABOOT,O_RDWR);
+                char buffer[17];
+
+                lseek(file,-512,SEEK_END);
+
+                // Unlock the bootloader
+                if (strcmp(argv[1],"unlock") == 0) {
+                        write(file,&UNLOCK_STRING,sizeof(UNLOCK_STRING));
+                }
+
+                // Lock the bootloader
+                if (strcmp(argv[1],"lock") == 0) {
+                        write(file,&LOCK_STRING,sizeof(LOCK_STRING));
+                }
+
+                // Present the status of the bootloader
+                if (check_bootloader_status() == 0) {
+                        printf("You have a locked bootloader\n");
+                } else if (check_bootloader_status() == 1) {
+                        printf("You have a partially unlocked bootloader now\n");
+                } else {
+                        printf("Unknown error occured\n");
+                }
+
+        } else {
+                printf("An invalid argument was provided\n");
+        }
+
+        // Close the program
         exit(1);
-    }
-	if (unlock == 1)
-	{
-	    // Unlock the bootloader
-	    write(file,&unlock_string,sizeof(unlock_string));
-	}
-	if (lock == 1)
-    {
-        // Unlock the bootloader
-        write(file,&lock_string,sizeof(unlock_string));
-    }
-	
-    // Seek from the bottom of the file
-    // Show our Unlock or Lock status to the user
-    lseek(file,-512,SEEK_END);
-	read(file,buffer,17);
-    hexDump ("after Patch buffer", &buffer, sizeof (buffer));
-	
-    if(unlock == 1){
-        printf("You have a partially unlocked bootloader now\n");
-        exit(1);
-    }
-    
-    if(lock == 1)
-    {
-        printf("You have a Re-Locked Your bootloader now\n");
-        exit(1);
-    }
-    return 0;
 }

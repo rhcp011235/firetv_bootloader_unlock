@@ -9,15 +9,22 @@ This was reversed from http://forum.xda-developers.com/fire-tv/orig-development/
 
 and I hate closed source things that do things to my systems :)
 
-So far i have it working on a local box. You grab your aboot. patch and resend. 
-
-- Update Android.mk made
-- Update Changed into a function type code
-- working arm binary (will run directly on the firetv)
 - Anyone sees anything else be sure to do a pull request
-- 
 
 Also, If anyone wants to make an APK unlock for this! Let me know!!!!!!
+
+Building
+Download the Android Native Development Kit (NDK): http://developer.android.com/tools/sdk/ndk/index.html#Downloads
+
+Extract into some directory and put that in your path: export PATH=ANDK_DIR:$PATH
+
+In another directory clone this repo: git clone --recursive https://github.com/android-rooting-tools/android_run_root_shell
+
+Change to the directory where the repo was cloned cd android_run_root_shell
+
+To start build process use the following ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk
+
+If all goes well you will get the compiled binary at: ./libs/armeabi/unlock_firetv
 
 have fun guys and gals.
 

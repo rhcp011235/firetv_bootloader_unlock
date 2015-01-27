@@ -17,6 +17,49 @@
 #define LOCK_STRING "ANDROID-BOOT!\0\0\0\0\0\0\0"
 #define UNLOCK_STRING "ANDROID-BOOT!\0\0\0\1\0\0\0"
 
+//
+// Function used to parse the build.prop to check if you can unlock or not
+char *android_product_name_get(char product_name[256])
+{
+	FILE *fp = NULL;
+	char line[256];
+	char *pname;
+
+
+	fp = fopen("/system/build.prop", "r");
+	if (fp == NULL) {
+		fprintf(stderr,
+			"omapconf: %s(): could not open '/system/build.prop'?!\n", __func__);
+		return NULL;
+	}
+
+	/* Retrieve pastry */
+	while (fgets(line, 256, fp) != NULL) {
+		/* Remove endind '\n' */
+		line[strlen(line) - 1] = '\0';
+		dprintf("%s(): line=%s len=%u\n", __func__, line, strlen(line));
+		/* Looking for the "ro.build.version.release" property line */
+		if (strstr(line, "ro.build.version.incremental=") == NULL)
+			continue;
+		fclose(fp);
+		dprintf("%s(): ro.product.name line found.\n", __func__);
+		pname = strchr(line, '=');
+		pname += sizeof(char);
+		if (pname == NULL) {
+			dprintf("%s(): '=' not found?!\n", __func__);
+			return NULL;
+		}
+		strncpy(product_name, pname, 256);
+		dprintf("%s(): product_name='%s'\n", __func__, product_name);
+		return product_name;
+	}
+
+	fclose(fp);
+	dprintf("%s(): eof reached!\n", __func__);
+	return NULL;
+}
+
+
 /* Load the aboot partition from emmc and return it */
 int check_for_aboot_partition() {
         int file = open(FIRE_TV_ABOOT,O_RDWR);

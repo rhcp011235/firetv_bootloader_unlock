@@ -37,25 +37,21 @@ char *android_product_name_get(char product_name[256])
 	while (fgets(line, 256, fp) != NULL) {
 		/* Remove endind '\n' */
 		line[strlen(line) - 1] = '\0';
-		dprintf("%s(): line=%s len=%u\n", __func__, line, strlen(line));
+
 		/* Looking for the "ro.build.version.release" property line */
 		if (strstr(line, "ro.build.version.incremental=") == NULL)
 			continue;
 		fclose(fp);
-		dprintf("%s(): ro.product.name line found.\n", __func__);
 		pname = strchr(line, '=');
 		pname += sizeof(char);
 		if (pname == NULL) {
-			dprintf("%s(): '=' not found?!\n", __func__);
 			return NULL;
 		}
 		strncpy(product_name, pname, 256);
-		dprintf("%s(): product_name='%s'\n", __func__, product_name);
 		return product_name;
 	}
 
 	fclose(fp);
-	dprintf("%s(): eof reached!\n", __func__);
 	return NULL;
 }
 
@@ -97,7 +93,51 @@ int main(int argc, char *argv[]) {
                 exit(1);
         }
 
-        if (check_for_aboot_partition() == 0) {
+	// Check if we can even do anything first
+	char product_name[256];
+	
+	// Get the version of the Amazon FireTv Software to see if we can unlock or not
+	android_product_name_get(product_name);
+
+	//Check Versions for Unlock
+	if (strstr(product_name, "51.1.0.0") != NULL)
+                fprintf(stderr,"You can unlock your bootloder without downgrade. Congrats\n");
+	if (strstr(product_name, "51.1.0.1") != NULL)
+		fprintf(stderr,"You can unlock your bootloder without downgrade. Congrats\n");
+	if (strstr(product_name, "51.1.0.2") != NULL)
+                fprintf(stderr,"You can unlock your bootloder without downgrade. Congrats\n");
+    	if (strstr(product_name, "51.1.1.0") != NULL)
+	{
+	 	fprintf(stderr,"You need to downgrade to 51.1.0.2\n");
+		exit(1);
+	}
+    	if (strstr(product_name, "51.1.2.0") != NULL)
+    	{
+                fprintf(stderr,"No Root Or Downgrade SORRY!\n");
+		exit(1);    	
+    	}	
+	if (strstr(product_name, "51.1.3.0") != NULL)
+    	{
+                fprintf(stderr,"No Root Or Downgrade SORRY!\n");
+		exit(1);    	
+    	}	
+    	if (strstr(product_name, "51.1.4.0") != NULL)
+  	{
+                fprintf(stderr,"No Root Or Downgrade SORRY!\n");
+		exit(1);    	
+    	}	
+  	if (strstr(product_name, "51.1.4.1") != NULL)
+   	{
+                fprintf(stderr,"No Root Or Downgrade SORRY!\n");
+		exit(1);    	
+    	}	
+    	if (strstr(product_name, "51.1.4.2") != NULL)
+    	{
+                fprintf(stderr,"No Root Or Downgrade SORRY!\n");
+		exit(1);    	
+    	}	
+	
+	if (check_for_aboot_partition() == 0) {
                 printf("No aboot partition is detected!\n");
                 exit(1);
         }

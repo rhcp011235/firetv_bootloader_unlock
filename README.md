@@ -18,9 +18,9 @@ Download the Android Native Development Kit (NDK): http://developer.android.com/
 
 Extract into some directory and put that in your path: export PATH=ANDK_DIR:$PATH
 
-In another directory clone this repo: git clone --recursive https://github.com/android-rooting-tools/android_run_root_shell
+In another directory clone this repo: git clone https://github.com/rhcp011235/firetv_bootloader_unlock.git
 
-Change to the directory where the repo was cloned cd android_run_root_shell
+Change to the directory where the repo was cloned cd firetv_bootloader_unlock
 
 To start build process use the following ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk
 
